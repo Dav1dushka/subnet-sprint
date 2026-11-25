@@ -1,0 +1,19 @@
+{
+  "name": "subnet-sprint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A 60-second subnetting game with bit-by-bit explanations.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs --tests && node --test \".test-build/*.test.mjs\"",
+    "typecheck": "tsc --noEmit",
+    "start": "node build.mjs && npx --yes serve site"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.3"
+  },
+  "license": "MIT"
+}
