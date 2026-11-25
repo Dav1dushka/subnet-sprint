@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subnet Sprint</title>
+<meta name="description" content="A 60-second subnetting game: network and broadcast addresses, masks and host counts, explained bit by bit.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c1226'/%3E%3Crect x='5' y='12' width='5' height='8' rx='1.5' fill='%23ffb547'/%3E%3Crect x='11' y='12' width='5' height='8' rx='1.5' fill='%23ffb547'/%3E%3Crect x='17' y='12' width='5' height='8' rx='1.5' fill='%233dd6c6'/%3E%3Crect x='23' y='12' width='5' height='8' rx='1.5' fill='%233dd6c6' opacity='.5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Bits are the picture: network bits amber, host bits teal, on a deep night-blue board. */
+  :root { color-scheme: dark; --bg: #0c1226; --panel: #131b36; --line: rgba(255,255,255,.1); --ink: #eef1ff; --mute: #9aa3c7;
+    --net: #ffb547; --host: #3dd6c6; --good: #5be08a; --bad: #ff6b81; --display: "Chakra Petch", "Arial Narrow", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace; }
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: radial-gradient(70% 50% at 50% 0%, #1b2552 0%, var(--bg) 70%) fixed, var(--bg); color: var(--ink);
+    font: 16px/1.55 Inter, system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 18px 48px; }
+  h1 { font: 700 clamp(44px, 9vw, 84px)/.95 var(--display); text-transform: uppercase; letter-spacing: .02em; margin: 0; }
+  h1 em { font-style: normal; color: var(--net); }
+  h2.prompt { font: 600 clamp(22px, 3.4vw, 30px)/1.2 var(--display); margin: 4px 0 18px; text-wrap: balance; }
+  .tag { color: var(--mute); font-size: 18px; max-width: 52ch; margin: 12px 0 22px; }
+  code, kbd { font-family: var(--mono); }
+  kbd { font-size: 11px; padding: 2px 6px; border-radius: 5px; border: 1px solid currentColor; opacity: .6; margin-left: 6px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--net); outline-offset: 2px; }
+
+  /* the bit strip */
+  .strip { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 0 0 18px; }
+  .strip-label { display: block; font: 700 14px var(--mono); color: var(--mute); margin-bottom: 8px; }
+  .octets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .octet { display: grid; gap: 4px; }
+  .cells { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
+  .bit { display: grid; place-items: center; aspect-ratio: 3 / 4; border-radius: 4px; font: 700 clamp(10px, 1.8vw, 15px) var(--mono);
+    background: rgba(255,255,255,.04); color: rgba(255,255,255,.35); }
+  .bit.net { background: rgba(255,181,71,.12); color: rgba(255,181,71,.55); }
+  .bit.net.one { background: var(--net); color: #2a1a00; }
+  .bit.host { background: rgba(61,214,198,.1); color: rgba(61,214,198,.55); }
+  .bit.host.one { background: var(--host); color: #00231f; }
+  .bit.one:not(.net):not(.host) { background: #dfe4ff; color: #0c1226; }
+  .dec { text-align: center; font: 700 15px var(--mono); }
+  .strip.flash { animation: flash .6s ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 3px var(--net); } to { box-shadow: 0 0 0 0 transparent; } }
+
+  /* start */
+  .levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 4px 0 14px; }
+  .level { display: grid; gap: 2px; text-align: left; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
+  .level b { font: 700 20px var(--display); }
+  .level span { color: var(--mute); font-size: 14px; }
+  .level small { color: var(--net); font: 12px var(--mono); }
+  .level.on { border-color: var(--net); box-shadow: inset 0 0 0 1px var(--net); }
+  .modes { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+  .go { min-height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-weight: 600; }
+  .go.primary { background: var(--net); color: #2a1a00; border-color: transparent; }
+  .go:hover { filter: brightness(1.08); }
+  .how { color: var(--mute); font-size: 14px; max-width: 64ch; }
+
+  /* game */
+  .hud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-bottom: 22px; position: relative; padding-top: 12px; font-size: 15px; color: var(--mute); }
+  .hud b { color: var(--ink); font: 700 18px var(--mono); }
+  .hud i { font-style: normal; color: var(--net); font-family: var(--mono); }
+  .timer { position: absolute; inset: 0 0 auto; height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .timer span { display: block; height: 100%; background: linear-gradient(90deg, var(--net), var(--host)); transition: width .1s linear; }
+  .quit { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; color: var(--mute); }
+  .kind { display: inline-block; font: 700 13px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--host); margin: 0; }
+  .answer { display: flex; gap: 10px; flex-wrap: wrap; }
+  .answer input { flex: 1 1 240px; font: 700 24px var(--mono); color: var(--ink); background: #0a0f22; border: 2px solid var(--line); border-radius: 12px; padding: 10px 14px; min-height: 56px; }
+  .yn { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .answer-btn { min-height: 64px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font: 700 22px var(--display); }
+  #feedback { margin-top: 16px; }
+  #feedback:empty { display: none; }
+  #feedback .verdict { font: 700 22px var(--display); margin: 0 0 6px; }
+  #feedback.right .verdict { color: var(--good); }
+  #feedback.wrong .verdict { color: var(--bad); }
+  #feedback .verdict span { font-family: var(--mono); font-size: 16px; }
+  .explain { color: #cdd3f2; margin: 0 0 12px; }
+
+  /* end */
+  .big { font-size: clamp(72px, 16vw, 140px); color: var(--net); }
+  .topics { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 8px; max-width: 560px; }
+  .topics li { display: grid; grid-template-columns: minmax(0, 11em) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 15px; }
+  .track { height: 10px; border-radius: 5px; background: rgba(255,107,129,.25); overflow: hidden; }
+  .track span { display: block; height: 100%; background: var(--good); }
+  .topics b { font-family: var(--mono); }
+  footer { margin-top: 36px; color: var(--mute); font-size: 13px; }
+  footer a { color: var(--mute); }
+  @media (max-width: 560px) {
+    .levels { grid-template-columns: minmax(0, 1fr); }
+    .octets { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+    .bit { font-size: 13px; }
+    kbd { display: none; }
+    .cells { gap: 1px; }
+    .topics li { grid-template-columns: minmax(0, 1fr) auto; }
+    .topics .track { grid-column: 1 / -1; grid-row: 2; }
+  }
+  @media (prefers-reduced-motion: reduce) { .strip.flash { animation: none; } .timer span { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div id="app"></div>
+  <footer>Subnet Sprint · open source on <a href="https://github.com/Dav1dushka/subnet-sprint">GitHub</a> · runs entirely in your browser</footer>
+</main>
+<script src="game.js"></script>
+</body>
+</html>
